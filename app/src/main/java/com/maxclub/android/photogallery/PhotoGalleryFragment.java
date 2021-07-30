@@ -2,10 +2,11 @@ package com.maxclub.android.photogallery;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -21,11 +22,14 @@ import java.util.List;
 
 public class PhotoGalleryFragment extends Fragment {
 
+    private static final int MIN_ITEM_WIDTH_DIP = 1200;
     private static final String TAG = "PhotoGalleryFragment";
 
     private RecyclerView mPhotoRecyclerView;
-    PhotoAdapter mAdapter;
+    private GridLayoutManager mLayoutManager;
+    private PhotoAdapter mAdapter;
     private List<GalleryItem> mItems = new ArrayList<>();
+    private boolean mCanScrollToBottomFlag;
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
@@ -48,13 +52,25 @@ public class PhotoGalleryFragment extends Fragment {
         View view = inflater.inflate(R.layout.activity_photo_gallery, container, false);
 
         mPhotoRecyclerView = (RecyclerView) view.findViewById(R.id.photo_recycler_view);
-        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+        mLayoutManager = new GridLayoutManager(getActivity(), 1);
+        mPhotoRecyclerView.setLayoutManager(mLayoutManager);
+        mPhotoRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                int recyclerViewWidthDip = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+                        mPhotoRecyclerView.getWidth(), getResources().getDisplayMetrics());
+                int calculatedSpanCount = recyclerViewWidthDip / MIN_ITEM_WIDTH_DIP;
+
+                mLayoutManager.setSpanCount(Math.max(calculatedSpanCount, 1));
+            }
+        });
         mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull @NotNull RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
 
-                if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
+                if (!recyclerView.canScrollVertically(1) && mCanScrollToBottomFlag) {
+                    mCanScrollToBottomFlag = false;
                     new FetchItemsTask().execute();
                 }
             }
@@ -67,13 +83,8 @@ public class PhotoGalleryFragment extends Fragment {
 
     private void setupAdapter() {
         if (isAdded()) {
-            if (mAdapter == null) {
-                mAdapter = new PhotoAdapter(mItems);
-                mPhotoRecyclerView.setAdapter(mAdapter);
-            } else {
-                mAdapter.setGalleryItems(mItems);
-                mAdapter.notifyDataSetChanged();
-            }
+            mAdapter = new PhotoAdapter(mItems);
+            mPhotoRecyclerView.setAdapter(mAdapter);
         }
     }
 
@@ -135,8 +146,15 @@ public class PhotoGalleryFragment extends Fragment {
 
         @Override
         protected void onPostExecute(List<GalleryItem> galleryItems) {
+            int visibleItemCount = mLayoutManager.findLastVisibleItemPosition()
+                    - mLayoutManager.findFirstCompletelyVisibleItemPosition();
+            int position = mAdapter.getItemCount() - visibleItemCount;
+
             mItems.addAll(galleryItems);
             setupAdapter();
+            mPhotoRecyclerView.scrollToPosition(position);
+
+            mCanScrollToBottomFlag = true;
         }
     }
 }

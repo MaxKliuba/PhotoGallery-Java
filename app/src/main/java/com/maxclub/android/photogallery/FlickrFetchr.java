@@ -4,7 +4,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.GsonBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -13,7 +13,6 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -83,7 +82,7 @@ public class FlickrFetchr {
 
             Log.i(TAG, "Received JSON: " + jsonString);
             JSONObject jsonBody = new JSONObject(jsonString);
-            items = parseItems(jsonBody);
+            parseItems(items, jsonBody);
         } catch (IOException ioe) {
             Log.e(TAG, "Failed to fetch items", ioe);
         } catch (JSONException je) {
@@ -93,16 +92,19 @@ public class FlickrFetchr {
         return items;
     }
 
-    private List<GalleryItem> parseItems(JSONObject jsonBody) throws JSONException {
+    private void parseItems(List<GalleryItem> items, JSONObject jsonBody) throws JSONException {
         JSONObject photosJsonObject = jsonBody.getJSONObject("photos");
         JSONArray photoJsonArray = photosJsonObject.getJSONArray("photo");
 
         setCurrentPage(photosJsonObject.getInt("page"));
 
-        Gson gson = new Gson();
-        Type collectionType = new TypeToken<List<GalleryItem>>() {
-        }.getType();
+        Gson gson = new GsonBuilder().create();
+        GalleryItem[] galleryItems = gson.fromJson(photoJsonArray.toString(), GalleryItem[].class);
 
-        return gson.fromJson(photoJsonArray.toString(), collectionType);
+        for (GalleryItem item : galleryItems) {
+            if (item.getUrl() != null) {
+                items.add(item);
+            }
+        }
     }
 }
