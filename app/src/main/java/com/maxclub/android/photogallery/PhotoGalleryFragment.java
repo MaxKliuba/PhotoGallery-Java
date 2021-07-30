@@ -2,6 +2,7 @@ package com.maxclub.android.photogallery;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,6 +24,7 @@ public class PhotoGalleryFragment extends Fragment {
     private static final String TAG = "PhotoGalleryFragment";
 
     private RecyclerView mPhotoRecyclerView;
+    PhotoAdapter mAdapter;
     private List<GalleryItem> mItems = new ArrayList<>();
 
     public static PhotoGalleryFragment newInstance() {
@@ -47,6 +49,16 @@ public class PhotoGalleryFragment extends Fragment {
 
         mPhotoRecyclerView = (RecyclerView) view.findViewById(R.id.photo_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+        mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull @NotNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+
+                if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    new FetchItemsTask().execute();
+                }
+            }
+        });
 
         setupAdapter();
 
@@ -55,7 +67,13 @@ public class PhotoGalleryFragment extends Fragment {
 
     private void setupAdapter() {
         if (isAdded()) {
-            mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
+            if (mAdapter == null) {
+                mAdapter = new PhotoAdapter(mItems);
+                mPhotoRecyclerView.setAdapter(mAdapter);
+            } else {
+                mAdapter.setGalleryItems(mItems);
+                mAdapter.notifyDataSetChanged();
+            }
         }
     }
 
@@ -77,6 +95,14 @@ public class PhotoGalleryFragment extends Fragment {
         private List<GalleryItem> mGalleryItems;
 
         public PhotoAdapter(List<GalleryItem> galleryItems) {
+            mGalleryItems = galleryItems;
+        }
+
+        public List<GalleryItem> getGalleryItems() {
+            return mGalleryItems;
+        }
+
+        public void setGalleryItems(List<GalleryItem> galleryItems) {
             mGalleryItems = galleryItems;
         }
 
@@ -109,7 +135,7 @@ public class PhotoGalleryFragment extends Fragment {
 
         @Override
         protected void onPostExecute(List<GalleryItem> galleryItems) {
-            mItems = galleryItems;
+            mItems.addAll(galleryItems);
             setupAdapter();
         }
     }

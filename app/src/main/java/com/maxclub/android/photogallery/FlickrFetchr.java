@@ -23,6 +23,16 @@ public class FlickrFetchr {
     private static final String TAG = "FlickrFetchr";
     private static final String API_KEY = "d160c1b14864aede65a60eba483fc243";
 
+    private static int currentPage = 0;
+
+    public static int getCurrentPage() {
+        return currentPage;
+    }
+
+    public static void setCurrentPage(int currentPage) {
+        FlickrFetchr.currentPage = currentPage;
+    }
+
     public byte[] getUrlBytes(String urlSpec) throws IOException {
         URL url = new URL(urlSpec);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -52,6 +62,10 @@ public class FlickrFetchr {
     }
 
     public List<GalleryItem> fetchItems() {
+        return fetchItemsByPage(getCurrentPage() + 1);
+    }
+
+    public List<GalleryItem> fetchItemsByPage(int page) {
         List<GalleryItem> items = new ArrayList<>();
 
         try {
@@ -62,6 +76,8 @@ public class FlickrFetchr {
                     .appendQueryParameter("format", "json")
                     .appendQueryParameter("nojsoncallback", "1")
                     .appendQueryParameter("extras", "url_s")
+                    .appendQueryParameter("per_page", "100")
+                    .appendQueryParameter("page", String.valueOf(page))
                     .build().toString();
             String jsonString = getUrlString(url);
 
@@ -80,6 +96,8 @@ public class FlickrFetchr {
     private List<GalleryItem> parseItems(JSONObject jsonBody) throws JSONException {
         JSONObject photosJsonObject = jsonBody.getJSONObject("photos");
         JSONArray photoJsonArray = photosJsonObject.getJSONArray("photo");
+
+        setCurrentPage(photosJsonObject.getInt("page"));
 
         Gson gson = new Gson();
         Type collectionType = new TypeToken<List<GalleryItem>>() {
