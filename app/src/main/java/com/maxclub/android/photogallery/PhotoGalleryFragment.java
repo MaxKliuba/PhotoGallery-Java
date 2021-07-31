@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -29,7 +30,9 @@ public class PhotoGalleryFragment extends Fragment {
     private GridLayoutManager mLayoutManager;
     private PhotoAdapter mAdapter;
     private List<GalleryItem> mItems = new ArrayList<>();
-    private boolean mCanScrollToBottomFlag;
+    private boolean mIsFetching;
+    private int mCurrentPage = 1;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
@@ -39,7 +42,7 @@ public class PhotoGalleryFragment extends Fragment {
     public void onCreate(@Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-        new FetchItemsTask().execute();
+        fetchItemsAsync();
     }
 
     @Nullable
@@ -60,7 +63,6 @@ public class PhotoGalleryFragment extends Fragment {
                 int recyclerViewWidthDip = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
                         mPhotoRecyclerView.getWidth(), getResources().getDisplayMetrics());
                 int calculatedSpanCount = recyclerViewWidthDip / MIN_ITEM_WIDTH_DIP;
-
                 mLayoutManager.setSpanCount(Math.max(calculatedSpanCount, 1));
             }
         });
@@ -69,14 +71,23 @@ public class PhotoGalleryFragment extends Fragment {
             public void onScrollStateChanged(@NonNull @NotNull RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
 
-                if (!recyclerView.canScrollVertically(1) && mCanScrollToBottomFlag) {
-                    mCanScrollToBottomFlag = false;
-                    new FetchItemsTask().execute();
+                if (!recyclerView.canScrollVertically(1) && !mIsFetching) {
+                    fetchItemsAsync();
                 }
             }
         });
 
         setupAdapter();
+
+        swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                mCurrentPage = 1;
+                mItems.clear();
+                fetchItemsAsync();
+            }
+        });
 
         return view;
     }
@@ -86,6 +97,11 @@ public class PhotoGalleryFragment extends Fragment {
             mAdapter = new PhotoAdapter(mItems);
             mPhotoRecyclerView.setAdapter(mAdapter);
         }
+    }
+
+    private void fetchItemsAsync() {
+        mIsFetching = true;
+        new FetchItemsTask().execute(mCurrentPage++);
     }
 
     private class PhotoHolder extends RecyclerView.ViewHolder {
@@ -138,10 +154,10 @@ public class PhotoGalleryFragment extends Fragment {
         }
     }
 
-    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
+    private class FetchItemsTask extends AsyncTask<Integer, Void, List<GalleryItem>> {
         @Override
-        protected List<GalleryItem> doInBackground(Void... voids) {
-            return new FlickrFetchr().fetchItems();
+        protected List<GalleryItem> doInBackground(Integer... pages) {
+            return new FlickrFetcher().fetchItemsByPage(pages[0]);
         }
 
         @Override
@@ -154,7 +170,8 @@ public class PhotoGalleryFragment extends Fragment {
             setupAdapter();
             mPhotoRecyclerView.scrollToPosition(position);
 
-            mCanScrollToBottomFlag = true;
+            mIsFetching = false;
+            swipeRefreshLayout.setRefreshing(false);
         }
     }
 }

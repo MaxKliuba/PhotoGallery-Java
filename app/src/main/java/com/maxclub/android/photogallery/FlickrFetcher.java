@@ -18,19 +18,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FlickrFetchr {
+public class FlickrFetcher {
     private static final String TAG = "FlickrFetchr";
     private static final String API_KEY = "d160c1b14864aede65a60eba483fc243";
-
-    private static int currentPage = 0;
-
-    public static int getCurrentPage() {
-        return currentPage;
-    }
-
-    public static void setCurrentPage(int currentPage) {
-        FlickrFetchr.currentPage = currentPage;
-    }
 
     public byte[] getUrlBytes(String urlSpec) throws IOException {
         URL url = new URL(urlSpec);
@@ -58,10 +48,6 @@ public class FlickrFetchr {
 
     public String getUrlString(String urlSpec) throws IOException {
         return new String(getUrlBytes(urlSpec));
-    }
-
-    public List<GalleryItem> fetchItems() {
-        return fetchItemsByPage(getCurrentPage() + 1);
     }
 
     public List<GalleryItem> fetchItemsByPage(int page) {
@@ -96,14 +82,12 @@ public class FlickrFetchr {
         JSONObject photosJsonObject = jsonBody.getJSONObject("photos");
         JSONArray photoJsonArray = photosJsonObject.getJSONArray("photo");
 
-        setCurrentPage(photosJsonObject.getInt("page"));
-
         Gson gson = new GsonBuilder().create();
-        GalleryItem[] galleryItems = gson.fromJson(photoJsonArray.toString(), GalleryItem[].class);
+        GalleryItem[] galleryItemsArray = gson.fromJson(photoJsonArray.toString(), GalleryItem[].class);
 
-        for (GalleryItem item : galleryItems) {
-            if (item.getUrl() != null) {
-                items.add(item);
+        for (int i = 0; i <= galleryItemsArray.length - 1; i++) {
+            if (galleryItemsArray[i].getUrl() != null) {
+                items.add(galleryItemsArray[i]);
             }
         }
     }
