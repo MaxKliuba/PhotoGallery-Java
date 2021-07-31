@@ -124,6 +124,8 @@ public class PhotoGalleryFragment extends Fragment {
             Picasso.get()
                     .load(galleryItem.getUrl())
                     .placeholder(R.drawable.placeholder)
+                    .fit()
+                    .centerCrop()
                     .into(mItemImageView);
         }
     }
