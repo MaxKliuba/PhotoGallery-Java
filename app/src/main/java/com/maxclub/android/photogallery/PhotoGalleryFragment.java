@@ -28,9 +28,8 @@ public class PhotoGalleryFragment extends Fragment {
 
     private RecyclerView mPhotoRecyclerView;
     private GridLayoutManager mLayoutManager;
-    private PhotoAdapter mAdapter;
     private List<GalleryItem> mItems = new ArrayList<>();
-    private boolean mIsFetching;
+    private boolean mIsFetching = false;
     private int mCurrentPage = 1;
     private SwipeRefreshLayout swipeRefreshLayout;
 
@@ -94,8 +93,7 @@ public class PhotoGalleryFragment extends Fragment {
 
     private void setupAdapter() {
         if (isAdded()) {
-            mAdapter = new PhotoAdapter(mItems);
-            mPhotoRecyclerView.setAdapter(mAdapter);
+            mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
         }
     }
 
@@ -122,14 +120,6 @@ public class PhotoGalleryFragment extends Fragment {
         private List<GalleryItem> mGalleryItems;
 
         public PhotoAdapter(List<GalleryItem> galleryItems) {
-            mGalleryItems = galleryItems;
-        }
-
-        public List<GalleryItem> getGalleryItems() {
-            return mGalleryItems;
-        }
-
-        public void setGalleryItems(List<GalleryItem> galleryItems) {
             mGalleryItems = galleryItems;
         }
 
@@ -164,7 +154,7 @@ public class PhotoGalleryFragment extends Fragment {
         protected void onPostExecute(List<GalleryItem> galleryItems) {
             int visibleItemCount = mLayoutManager.findLastVisibleItemPosition()
                     - mLayoutManager.findFirstCompletelyVisibleItemPosition();
-            int position = mAdapter.getItemCount() - visibleItemCount;
+            int position = mItems.size() - visibleItemCount;
 
             mItems.addAll(galleryItems);
             setupAdapter();
