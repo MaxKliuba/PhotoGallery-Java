@@ -31,6 +31,7 @@ public class PhotoGalleryFragment extends Fragment {
     private GridLayoutManager mLayoutManager;
     private List<GalleryItem> mItems = new ArrayList<>();
     private boolean mIsFetching = false;
+    private boolean mIsRefreshing = false;
     private int mCurrentPage = 1;
     private SwipeRefreshLayout swipeRefreshLayout;
 
@@ -81,8 +82,8 @@ public class PhotoGalleryFragment extends Fragment {
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
+                mIsRefreshing = true;
                 mCurrentPage = 1;
-                mItems.clear();
                 fetchItemsAsync();
             }
         });
@@ -167,6 +168,12 @@ public class PhotoGalleryFragment extends Fragment {
 
         @Override
         protected void onPostExecute(List<GalleryItem> galleryItems) {
+            if (mIsRefreshing) {
+                mIsRefreshing = false;
+                swipeRefreshLayout.setRefreshing(false);
+                mItems.clear();
+            }
+
             int visibleItemCount = mLayoutManager.findLastVisibleItemPosition()
                     - mLayoutManager.findFirstCompletelyVisibleItemPosition();
             int position = mItems.size() - visibleItemCount;
@@ -176,7 +183,6 @@ public class PhotoGalleryFragment extends Fragment {
             mPhotoRecyclerView.scrollToPosition(position);
 
             mIsFetching = false;
-            swipeRefreshLayout.setRefreshing(false);
         }
     }
 }
