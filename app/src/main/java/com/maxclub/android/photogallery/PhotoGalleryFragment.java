@@ -10,6 +10,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -20,6 +22,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.squareup.picasso.Picasso;
 
 import org.jetbrains.annotations.NotNull;
@@ -32,6 +36,7 @@ public class PhotoGalleryFragment extends Fragment {
     private static final String TAG = "PhotoGalleryFragment";
 
     private static final int MIN_ITEM_WIDTH_PX = 480;
+    private static final int VERTICAL_SCROLL_RANGE = 180;
 
     private RecyclerView mPhotoRecyclerView;
     private GridLayoutManager mLayoutManager;
@@ -39,7 +44,13 @@ public class PhotoGalleryFragment extends Fragment {
     private boolean mIsFetching = false;
     private boolean mIsRefreshing = false;
     private int mCurrentPage = 1;
-    private SwipeRefreshLayout swipeRefreshLayout;
+    private SwipeRefreshLayout mSwipeRefreshLayout;
+    private LinearProgressIndicator mLinearProgressIndicator;
+    private FloatingActionButton mScrollUpButton;
+    private boolean mIsScrollUpButtonVisible;
+    private int mPrevVerticalScrollOffset;
+    private Animation mAnimMoveDown;
+    private Animation mAnimMoveUp;
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
@@ -50,8 +61,6 @@ public class PhotoGalleryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
         setHasOptionsMenu(true);
-
-        fetchItemsAsync();
     }
 
     @Nullable
@@ -75,24 +84,88 @@ public class PhotoGalleryFragment extends Fragment {
         });
         mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
-            public void onScrollStateChanged(@NonNull @NotNull RecyclerView recyclerView, int newState) {
-                super.onScrollStateChanged(recyclerView, newState);
+            public void onScrolled(@NonNull @NotNull RecyclerView recyclerView, int dx, int dy) {
+                if (Math.abs(recyclerView.computeVerticalScrollOffset() - mPrevVerticalScrollOffset) > VERTICAL_SCROLL_RANGE) {
+                    mPrevVerticalScrollOffset = recyclerView.computeVerticalScrollOffset();
 
-                if (!recyclerView.canScrollVertically(1) && !mIsFetching) {
+                    if (dy > 0 && mIsScrollUpButtonVisible) { // scrolling down
+                        mScrollUpButton.startAnimation(mAnimMoveUp);
+                    } else if (dy < 0 && !mIsScrollUpButtonVisible) { // scrolling up
+                        mScrollUpButton.startAnimation(mAnimMoveDown);
+                    }
+                }
+            }
+
+            @Override
+            public void onScrollStateChanged(@NonNull @NotNull RecyclerView recyclerView, int newState) {
+                if (!recyclerView.canScrollVertically(1)) {
                     fetchItemsAsync(mCurrentPage + 1);
                 }
+
+                if (!recyclerView.canScrollVertically(-1) && mIsScrollUpButtonVisible) {
+                    mScrollUpButton.startAnimation(mAnimMoveUp);
+                }
+
+                mPrevVerticalScrollOffset = recyclerView.computeVerticalScrollOffset();
             }
         });
 
         setupAdapter();
 
-        swipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipe_refresh_layout);
-        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+        mSwipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipe_refresh_layout);
+        mSwipeRefreshLayout.setColorSchemeResources(R.color.design_default_color_primary);
+        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
                 fetchItemsAsync();
             }
         });
+
+        mLinearProgressIndicator = (LinearProgressIndicator) view.findViewById(R.id.linear_progress_indicator);
+
+        mScrollUpButton = (FloatingActionButton) view.findViewById(R.id.scroll_button);
+        mScrollUpButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mPhotoRecyclerView.smoothScrollToPosition(0);
+            }
+        });
+
+        mAnimMoveDown = AnimationUtils.loadAnimation(getActivity(), R.anim.move_down);
+        mAnimMoveDown.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                mIsScrollUpButtonVisible = true;
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                mScrollUpButton.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+            }
+        });
+
+        mAnimMoveUp = AnimationUtils.loadAnimation(getActivity(), R.anim.move_up);
+        mAnimMoveUp.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                mIsScrollUpButtonVisible = false;
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                mScrollUpButton.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+            }
+        });
+
+        fetchItemsAsync();
 
         return view;
     }
@@ -157,8 +230,10 @@ public class PhotoGalleryFragment extends Fragment {
     }
 
     private void fetchItemsAsync(int page) {
-        mCurrentPage = page;
-        new FetchItemsTask(page, QueryPreferences.getStoredQuery(getActivity())).execute();
+        if (!mIsFetching) {
+            mCurrentPage = page;
+            new FetchItemsTask(page, QueryPreferences.getStoredQuery(getActivity())).execute();
+        }
     }
 
     private void fetchItemsAsync() {
@@ -226,6 +301,7 @@ public class PhotoGalleryFragment extends Fragment {
         @Override
         protected void onPreExecute() {
             mIsFetching = true;
+            mLinearProgressIndicator.setVisibility(View.VISIBLE);
         }
 
         @Override
@@ -241,7 +317,7 @@ public class PhotoGalleryFragment extends Fragment {
         protected void onPostExecute(List<GalleryItem> galleryItems) {
             if (mIsRefreshing) {
                 mIsRefreshing = false;
-                swipeRefreshLayout.setRefreshing(false);
+                mSwipeRefreshLayout.setRefreshing(false);
                 mItems.clear();
             }
 
@@ -253,6 +329,7 @@ public class PhotoGalleryFragment extends Fragment {
             setupAdapter();
             mPhotoRecyclerView.scrollToPosition(position);
 
+            mLinearProgressIndicator.setVisibility(View.GONE);
             mIsFetching = false;
         }
     }
