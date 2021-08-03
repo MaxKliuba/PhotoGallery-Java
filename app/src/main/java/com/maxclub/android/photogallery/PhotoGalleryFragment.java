@@ -105,8 +105,6 @@ public class PhotoGalleryFragment extends Fragment {
                 if (!recyclerView.canScrollVertically(-1) && mIsScrollUpButtonVisible) {
                     mScrollUpButton.startAnimation(mAnimMoveUp);
                 }
-
-                mPrevVerticalScrollOffset = recyclerView.computeVerticalScrollOffset();
             }
         });
 
