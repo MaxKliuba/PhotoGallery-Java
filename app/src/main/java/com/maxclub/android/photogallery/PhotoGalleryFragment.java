@@ -2,6 +2,7 @@ package com.maxclub.android.photogallery;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -12,6 +13,7 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -24,6 +26,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.squareup.picasso.Picasso;
 
 import org.jetbrains.annotations.NotNull;
@@ -62,7 +65,12 @@ public class PhotoGalleryFragment extends Fragment {
         setRetainInstance(true);
         setHasOptionsMenu(true);
 
-        fetchItemsAsync();
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                fetchItemsAsync();
+            }
+        }, 1);
     }
 
     @Nullable
@@ -210,24 +218,18 @@ public class PhotoGalleryFragment extends Fragment {
             }
         });
 
-        MenuItem toggleItem = menu.findItem(R.id.menu_item_toggle_polling);
         boolean isServiceAlarmOn = PollService.isServiceAlarmOn(getActivity());
         PollService.setServiceAlarm(getActivity(), isServiceAlarmOn);
-        toggleItem.setTitle(isServiceAlarmOn ? R.string.stop_polling : R.string.start_polling);
-    }
 
-    @Override
-    public boolean onOptionsItemSelected(@NonNull @NotNull MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_item_toggle_polling:
-                boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
-                PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
-                getActivity().invalidateOptionsMenu();
-
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+        MenuItem switchItem = menu.findItem(R.id.menu_item_notification_switch);
+        final SwitchMaterial notificationSwitch = (SwitchMaterial) switchItem.getActionView();
+        notificationSwitch.setChecked(isServiceAlarmOn);
+        notificationSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                PollService.setServiceAlarm(getActivity(), isChecked);
+            }
+        });
     }
 
     @Override
