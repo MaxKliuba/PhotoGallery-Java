@@ -209,6 +209,25 @@ public class PhotoGalleryFragment extends Fragment {
                 return false;
             }
         });
+
+        MenuItem toggleItem = menu.findItem(R.id.menu_item_toggle_polling);
+        boolean isServiceAlarmOn = PollService.isServiceAlarmOn(getActivity());
+        PollService.setServiceAlarm(getActivity(), isServiceAlarmOn);
+        toggleItem.setTitle(isServiceAlarmOn ? R.string.stop_polling : R.string.start_polling);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull @NotNull MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_item_toggle_polling:
+                boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
+                PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
+                getActivity().invalidateOptionsMenu();
+
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override
