@@ -61,6 +61,8 @@ public class PhotoGalleryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
         setHasOptionsMenu(true);
+
+        fetchItemsAsync();
     }
 
     @Nullable
@@ -162,8 +164,6 @@ public class PhotoGalleryFragment extends Fragment {
             public void onAnimationRepeat(Animation animation) {
             }
         });
-
-        fetchItemsAsync();
 
         return view;
     }
@@ -299,7 +299,9 @@ public class PhotoGalleryFragment extends Fragment {
         @Override
         protected void onPreExecute() {
             mIsFetching = true;
-            mLinearProgressIndicator.setVisibility(View.VISIBLE);
+            if (mLinearProgressIndicator != null) {
+                mLinearProgressIndicator.setVisibility(View.VISIBLE);
+            }
         }
 
         @Override
