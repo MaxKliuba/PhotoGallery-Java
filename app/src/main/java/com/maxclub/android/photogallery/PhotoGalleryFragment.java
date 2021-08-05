@@ -218,16 +218,17 @@ public class PhotoGalleryFragment extends Fragment {
             }
         });
 
-        boolean isServiceAlarmOn = PollService.isServiceAlarmOn(getActivity());
-        PollService.setServiceAlarm(getActivity(), isServiceAlarmOn);
-
         MenuItem switchItem = menu.findItem(R.id.menu_item_notification_switch);
         final SwitchMaterial notificationSwitch = (SwitchMaterial) switchItem.getActionView();
-        notificationSwitch.setChecked(isServiceAlarmOn);
+        notificationSwitch.setChecked(PollJobService.isActive(getActivity()));
         notificationSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                PollService.setServiceAlarm(getActivity(), isChecked);
+                if (isChecked) {
+                    PollJobService.start(getActivity());
+                } else {
+                    PollJobService.stop(getActivity());
+                }
             }
         });
     }
