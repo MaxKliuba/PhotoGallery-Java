@@ -1,8 +1,7 @@
 package com.maxclub.android.photogallery;
 
+import android.app.Activity;
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.job.JobInfo;
 import android.app.job.JobParameters;
@@ -13,18 +12,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 
 import java.util.List;
 
 public class PollJobService extends JobService {
-    private static final int JOB_ID = 1;
-
     private static final String TAG = "PollJobService";
+
+    private static final int JOB_ID = 1;
+    public static final String NOTIFICATION_CHANNEL_ID = "com.maxclub.android.photogallery";
+    public static final String ACTION_SHOW_NOTIFICATION = "com.maxclub.android.photogallery.SHOW_NOTIFICATION";
+    public static final String PERM_PRIVATE = "com.maxclub.android.photogallery.PRIVATE";
+    public static final String REQUEST_CODE = "REQUEST_CODE";
+    public static final String NOTIFICATION = "NOTIFICATION";
 
     private PollTask mCurrentTask;
 
@@ -58,19 +60,28 @@ public class PollJobService extends JobService {
         return false;
     }
 
-    public static void start(Context context) {
+    public static void setServiceAlarm(Context context, boolean isOn) {
+        if (isOn) {
+            start(context);
+        } else {
+            stop(context);
+        }
+    }
+
+    private static void start(Context context) {
         JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
         JobInfo jobInfo = new JobInfo.Builder(JOB_ID, new ComponentName(context, PollJobService.class))
                 .setPeriodic(1000 * 60 * 15)
                 .setPersisted(true)
                 .build();
-
         scheduler.schedule(jobInfo);
+        QueryPreferences.setAlarmOn(context, true);
     }
 
-    public static void stop(Context context) {
+    private static void stop(Context context) {
         JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
         scheduler.cancelAll();
+        QueryPreferences.setAlarmOn(context, false);
     }
 
     private class PollTask extends AsyncTask<JobParameters, Void, Void> {
@@ -105,17 +116,7 @@ public class PollJobService extends JobService {
                     Intent i = PhotoGalleryActivity.newIntent(mContext);
                     PendingIntent pendingIntent = PendingIntent.getActivity(mContext, 0, i, 0);
 
-                    final String notificationChannelId = "com.maxclub.android.photogallery";
-                    final String notificationMame = "NewPictures";
-
-                    NotificationManagerCompat notificationManager = NotificationManagerCompat.from(mContext);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        NotificationChannel notificationChannel = new NotificationChannel(notificationChannelId,
-                                notificationMame, NotificationManager.IMPORTANCE_DEFAULT);
-                        notificationManager.createNotificationChannel(notificationChannel);
-                    }
-
-                    Notification notification = new NotificationCompat.Builder(mContext, notificationChannelId)
+                    Notification notification = new NotificationCompat.Builder(mContext, NOTIFICATION_CHANNEL_ID)
                             .setTicker(resources.getString(R.string.new_pictures_title, resources.getString(R.string.app_name)))
                             .setSmallIcon(android.R.drawable.ic_menu_report_image)
                             .setContentTitle(resources.getString(R.string.new_pictures_title, resources.getString(R.string.app_name)))
@@ -124,7 +125,7 @@ public class PollJobService extends JobService {
                             .setAutoCancel(true)
                             .build();
 
-                    notificationManager.notify(0, notification);
+                    showBackgroundNotification(0, notification);
                 }
 
                 QueryPreferences.setLastResultId(mContext, resultId);
@@ -133,6 +134,14 @@ public class PollJobService extends JobService {
             jobFinished(jobParams, false);
 
             return null;
+        }
+
+        private void showBackgroundNotification(int requestCode, Notification notification) {
+            Intent intent = new Intent(ACTION_SHOW_NOTIFICATION);
+            intent.putExtra(REQUEST_CODE, requestCode);
+            intent.putExtra(NOTIFICATION, notification);
+            sendOrderedBroadcast(intent, PERM_PRIVATE, null, null,
+                    Activity.RESULT_OK, null, null);
         }
     }
 }
