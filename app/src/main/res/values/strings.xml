@@ -8,4 +8,5 @@
     <string name="notification_switch">Notification</string>
     <string name="new_pictures_title">New %1$s Pictures</string>
     <string name="new_pictures_text">You have new pictures in %1$s</string>
+    <string name="app_not_found">Oops, the application not found</string>
 </resources>
