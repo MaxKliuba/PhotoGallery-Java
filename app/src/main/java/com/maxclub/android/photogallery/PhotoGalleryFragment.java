@@ -1,5 +1,6 @@
 package com.maxclub.android.photogallery;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -256,22 +257,31 @@ public class PhotoGalleryFragment extends VisibleFragment {
         fetchItemsAsync(1);
     }
 
-    private class PhotoHolder extends RecyclerView.ViewHolder {
+    private class PhotoHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         private ImageView mItemImageView;
+        private GalleryItem mGalleryItem;
 
         public PhotoHolder(View itemView) {
             super(itemView);
 
             mItemImageView = (ImageView) itemView.findViewById(R.id.item_image_view);
+            itemView.setOnClickListener(this);
         }
 
         public void bindGalleryItem(GalleryItem galleryItem) {
+            mGalleryItem = galleryItem;
             Picasso.get()
                     .load(galleryItem.getUrl())
                     .placeholder(R.drawable.placeholder)
                     .fit()
                     .centerCrop()
                     .into(mItemImageView);
+        }
+
+        @Override
+        public void onClick(View v) {
+            Intent intent = PhotoPageActivity.newIntent(getActivity(), mGalleryItem.getPhotoUri());
+            startActivity(intent);
         }
     }
 

@@ -5,7 +5,7 @@ import android.content.Intent;
 
 import androidx.fragment.app.Fragment;
 
-public class PhotoGalleryActivity extends SingleActivityFragment {
+public class PhotoGalleryActivity extends SingleFragmentActivity {
 
     public static Intent newIntent(Context context) {
         return new Intent(context, PhotoGalleryActivity.class);
