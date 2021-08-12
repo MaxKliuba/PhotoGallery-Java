@@ -32,7 +32,6 @@ public class FlickrFetcher {
             .appendQueryParameter("extras", "url_s")
             .build();
 
-
     public byte[] getUrlBytes(String urlSpec) throws IOException {
         URL url = new URL(urlSpec);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
